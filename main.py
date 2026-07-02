@@ -1,41 +1,114 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
-from core.binary import BinaryFile
 import sys
+
+from core.binary import BinaryFile
+from analysis.ithmb_analyzer import ITHMBAnalyzer
+
+
+TITLE = "iPod Photo Recovery"
 
 
 def analyze(cache_path):
     root = Path(cache_path)
-    photo_db = root / "Photo Database"
-    ithmb_files = sorted(root.rglob("*.ithmb"))
 
-    print("iPod Photo Recovery - Analyze")
-    print("=" * 40)
-    print("Cache:", root)
-    print("Photo Database:", "YES" if photo_db.exists() else "NO")
+    if not root.exists():
+        print("Erreur : dossier introuvable")
+        print(root)
+        return
+
+    print("=" * 60)
+    print(TITLE)
+    print("=" * 60)
+
+    print("Cache :", root)
+    print()
+
+    # ------------------------------------------------------------
+    # Photo Database
+    # ------------------------------------------------------------
+
+    photo_db = root / "Photo Database"
 
     if photo_db.exists():
         db = BinaryFile(photo_db)
-        print("Photo Database size:", db.size)
-        print("Photo Database entropy:", round(db.entropy(), 3))
 
-    print("")
-    print(".ithmb files:", len(ithmb_files))
+        print("Photo Database")
+        print("------------------------------")
+        print("Status   : FOUND")
+        print("Size     :", db.size, "bytes")
+        print("Entropy  :", round(db.entropy(), 3))
+    else:
+        print("Photo Database")
+        print("------------------------------")
+        print("Status   : NOT FOUND")
 
-    for f in ithmb_files[:30]:
-        bf = BinaryFile(f)
-        rel = f.relative_to(root)
-        print(f"{rel} | {bf.size} bytes | entropy {round(bf.entropy(), 3)}")
+    print()
+
+    # ------------------------------------------------------------
+    # ITHMB
+    # ------------------------------------------------------------
+
+    ithmb_files = sorted(root.rglob("*.ithmb"))
+
+    print("ITHMB Files")
+    print("------------------------------")
+    print("Found :", len(ithmb_files))
+    print()
+
+    for ithmb in ithmb_files:
+
+        bf = BinaryFile(ithmb)
+
+        rel = ithmb.relative_to(root)
+
+        print("=" * 60)
+        print(rel)
+        print("=" * 60)
+
+        print("Size     :", bf.size)
+        print("Entropy  :", round(bf.entropy(), 3))
+        print()
+
+        analyzer = ITHMBAnalyzer(ithmb)
+
+        candidates = analyzer.candidate_frames()
+
+        print("Best candidates:")
+
+        for c in candidates[:8]:
+
+            print(
+                f"  {c['width']}x{c['height']:>3}   "
+                f"{c['format']:<10}   "
+                f"frames={c['frames']:<4}   "
+                f"remainder={c['remainder']}"
+            )
+
+        print()
+
+
+def usage():
+    print()
+    print("Usage:")
+    print()
+    print('python3 main.py analyze "/path/to/iPod Photo Cache"')
+    print()
 
 
 def main():
+
     if len(sys.argv) < 3:
-        print('Usage: python3 main.py analyze "/path/to/iPod Photo Cache"')
+        usage()
         return
 
-    if sys.argv[1] == "analyze":
+    command = sys.argv[1]
+
+    if command == "analyze":
         analyze(sys.argv[2])
     else:
-        print("Unknown command:", sys.argv[1])
+        print("Unknown command:", command)
 
 
 if __name__ == "__main__":
