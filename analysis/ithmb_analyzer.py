@@ -21,18 +21,13 @@ class ITHMBAnalyzer:
         results = []
 
         for w, h in COMMON_SIZES:
-            rgb888 = w * h * 3
-            rgb565 = w * h * 2
-            y420 = int(w * h * 1.5)
+            formats = [
+                ("RGB888", w * h * 3),
+                ("RGB565", w * h * 2),
+                ("YCbCr420", int(w * h * 1.5)),
+            ]
 
-            for fmt, frame_size in [
-                ("RGB888", rgb888),
-                ("RGB565", rgb565),
-                ("YCbCr420", y420),
-            ]:
-                if frame_size == 0:
-                    continue
-
+            for fmt, frame_size in formats:
                 frames = size // frame_size
                 remainder = size % frame_size
 
@@ -41,6 +36,7 @@ class ITHMBAnalyzer:
                         "width": w,
                         "height": h,
                         "format": fmt,
+                        "frame_size": frame_size,
                         "frames": frames,
                         "remainder": remainder,
                     })
